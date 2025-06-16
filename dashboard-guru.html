@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="assets/img/favicon.png">
+  <title>Dashboard Guru - SMP ILMU TEKNOLOGI</title>
+  <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+.drag-area {
+  border: 2px dashed #0d6efd;
+  border-radius: 10px;
+  padding: 2rem;
+  text-align: center;
+  background: #f8f9fa;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+.drag-area.dragover { background: #e3f0ff; }
+.sidebar {
+  min-height: 100vh;
+  background: #0d6efd;
+  color: #fff;
+  padding: 2rem 1rem;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.04);
+}
+.sidebar-link {
+  color: #fff;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+}
+.sidebar-link.active, .sidebar-link:hover {
+  background: #fff;
+  color: #0d6efd !important;
+  text-decoration: none;
+}
+.user-profile {
+  background: rgba(255,255,255,0.12);
+  border-radius: 12px;
+}
+.modal { display:none; position:fixed; z-index:9999; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); align-items:center; justify-content:center; }
+.modal.show { display:flex; }
+</style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <nav class="col-md-2 sidebar d-flex flex-column align-items-center">
+        <a class="cs_site_branding d-block mb-3" href="index.html">
+          <img src="assets/img/logo.svg" alt="Logo Guru" style="max-width:200px; width:100%;">
+        </a>
+        <div class="user-profile text-center mb-4 p-3 w-100" style="background:rgba(255,255,255,0.12);border-radius:12px;">
+          <div class="rounded-circle bg-white d-inline-flex align-items-center justify-content-center mb-2 overflow-hidden" style="width:64px;height:64px;">
+            <img id="sidebarPhoto" src="assets/img/user-default.png" alt="Foto Profil" style="width:100%;height:100%;object-fit:cover;">
+          </div>
+          <div class="fw-bold" id="sidebarName">Guru</div>
+          <div class="small" id="sidebarUsername">guru</div>
+          <span class="badge bg-success text-white mt-1">Guru</span>
+          <div class="small mt-2" id="sidebarDesc">Deskripsi singkat guru.</div>
+          <button class="btn btn-light btn-sm mt-2" onclick="showEditProfile()"><i class="fa fa-edit"></i> Edit Profil</button>
+        </div>
+        <div class="nav flex-column w-100">
+          <a href="#" class="nav-link sidebar-link active" id="menuMateri"><i class="fa fa-book me-2"></i> Materi</a>
+          <a href="#" class="nav-link sidebar-link" id="menuQuiz"><i class="fa fa-question-circle me-2"></i> Kuis</a>
+          <a href="#" class="nav-link sidebar-link" id="menuForum"><i class="fa fa-comments me-2"></i> Forum</a>
+          <a href="#" class="nav-link sidebar-link" id="menuNews"><i class="fa fa-bullhorn me-2"></i> Berita</a>
+        </div>
+      </nav>
+      <main class="col-md-10 content">
+        <section id="sectionMateri" class="mb-5">
+          <h4 class="mb-3">Kelola Materi Pelajaran (Drag & Drop)</h4>
+          <div id="materiDropArea" class="drag-area mb-3" style="min-height:120px;">
+            <div id="materiDropText">Tarik & lepas file materi di sini atau klik untuk memilih file</div>
+            <input type="file" id="materiInput" style="display:none;" multiple>
+          </div>
+          <div id="materiList"></div>
+        </section>
+        <section id="sectionQuiz" class="mb-5" style="display:none;">
+          <div class="card p-4 mb-4">
+            <h4>Edit Soal Kuis Interaktif</h4>
+            <form id="quizFormGuru">
+              <div id="quizEditArea"></div>
+              <button type="button" class="btn btn-success mt-3" onclick="addQuizSoal()">Tambah Soal</button>
+              <button type="submit" class="btn btn-primary mt-3">Simpan Semua Soal</button>
+            </form>
+          </div>
+        </section>
+        <!-- Forum Section: Sudah ada, hanya update tampilan dan validasi -->
+        <section id="sectionForum" class="mb-5" style="display:none;">
+          <h3 class="mb-3 text-info">Forum Diskusi</h3>
+          <div class="card p-3 mb-3">
+            <form id="forumForm">
+              <div class="mb-2">
+                <input type="text" class="form-control" id="forumName" placeholder="Nama Anda" maxlength="30" required>
+              </div>
+              <div class="mb-2">
+                <input type="text" class="form-control" id="forumTopic" placeholder="Judul/topik pertanyaan" maxlength="60" required>
+              </div>
+              <div class="mb-2">
+                <textarea class="form-control" id="forumContent" placeholder="Tulis pertanyaan atau diskusi..." maxlength="300" required></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary">Kirim Topik</button>
+            </form>
+          </div>
+          <div id="forumList"></div>
+        </section>
+        <section id="sectionNews" class="mb-5" style="display:none;">
+          <h3 class="mb-3 text-warning">Berita & Pengumuman</h3>
+          <div id="newsGuruList"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  function getQuizData() {
+    let quiz = JSON.parse(localStorage.getItem('quizData') || 'null');
+    if (!quiz) quiz = [];
+    return quiz;
+  }
+  function setQuizData(quiz) {
+    localStorage.setItem('quizData', JSON.stringify(quiz));
+  }
+  function renderQuizEdit() {
+    console.log('[DEBUG] renderQuizEdit dipanggil');
+    const quiz = getQuizData();
+    let html = '';
+    quiz.forEach((q, i) => {
+      html += `<div class='border rounded p-3 mb-3'>
+        <label>Pertanyaan:</label>
+        <input type='text' class='form-control mb-2' name='q${i}' value="${q.question}">
+        <label>Pilihan Jawaban:</label>`;
+      q.options.forEach((opt, j) => {
+        html += `<div class='input-group mb-1'>
+          <span class='input-group-text'>${String.fromCharCode(65+j)}</span>
+          <input type='text' class='form-control' name='q${i}_opt${j}' value="${opt}">
+          <div class='input-group-text'><input type='radio' name='q${i}_ans' value='${j}' ${q.answer===j?'checked':''}> Kunci</div>
+        </div>`;
+      });
+      html += `<button type='button' class='btn btn-danger btn-sm' onclick='deleteQuizSoal(${i})'>Hapus Soal</button>`;
+      html += '</div>';
+    });
+    document.getElementById('quizEditArea').innerHTML = html;
+  }
+  window.addQuizSoal = function() {
+    let quiz = getQuizData();
+    quiz.push({ question: '', options: ['', '', '', ''], answer: 0 });
+    setQuizData(quiz);
+    renderQuizEdit();
+  };
+  window.deleteQuizSoal = function(idx) {
+    let quiz = getQuizData();
+    quiz.splice(idx, 1);
+    setQuizData(quiz);
+    renderQuizEdit();
+  };
+  document.getElementById('quizFormGuru').onsubmit = function(e) {
+    e.preventDefault();
+    let quiz = getQuizData();
+    const form = e.target;
+    quiz.forEach((q, i) => {
+      q.question = form[`q${i}`].value;
+      q.options = [0,1,2,3].map(j => form[`q${i}_opt${j}`].value);
+      q.answer = parseInt(form[`q${i}_ans`].value);
+    });
+    setQuizData(quiz);
+    alert('Soal kuis berhasil disimpan!');
+    renderQuizEdit();
+  };
+  // Materi Pelajaran Drag & Drop
+  function getMateriData() {
+    return JSON.parse(localStorage.getItem('materiData') || '[]');
+  }
+  function setMateriData(data) {
+    localStorage.setItem('materiData', JSON.stringify(data));
+  }
+  function renderMateriList() {
+    console.log('[DEBUG] renderMateriList dipanggil');
+    const materi = getMateriData();
+    let html = '';
+    if(materi.length === 0) {
+      html = '<div class="alert alert-warning">Belum ada materi diunggah.</div>';
+    } else {
+      materi.forEach((m, i) => {
+        html += `<div class='card mb-2 p-2 d-flex flex-row align-items-center'>
+          <div class='flex-grow-1'>
+            <b>${m.name}</b> <span class='badge bg-info'>${m.type}</span>
+            <div class='small text-muted'>${m.size} KB</div>
+          </div>
+          <button class='btn btn-danger btn-sm ms-2' onclick='deleteMateri(${i})'>Hapus</button>
+        </div>`;
+      });
+    }
+    document.getElementById('materiList').innerHTML = html;
+  }
+  window.deleteMateri = function(idx) {
+    let materi = getMateriData();
+    materi.splice(idx, 1);
+    setMateriData(materi);
+    renderMateriList();
+  };
+  const dropArea = document.getElementById('materiDropArea');
+  const inputFile = document.getElementById('materiInput');
+  dropArea.addEventListener('click', () => inputFile.click());
+  dropArea.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropArea.classList.add('dragover');
+  });
+  dropArea.addEventListener('dragleave', e => {
+    e.preventDefault();
+    dropArea.classList.remove('dragover');
+  });
+  dropArea.addEventListener('drop', e => {
+    e.preventDefault();
+    dropArea.classList.remove('dragover');
+    handleFiles(e.dataTransfer.files);
+  });
+  inputFile.addEventListener('change', e => {
+    handleFiles(e.target.files);
+  });
+  function handleFiles(files) {
+    let materi = getMateriData();
+    for(const file of files) {
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        materi.push({
+          name: file.name,
+          type: file.type || 'file',
+          size: Math.round(file.size/1024),
+          content: evt.target.result
+        });
+        setMateriData(materi);
+        renderMateriList();
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+  // Forum logic update
+  function getForumData() {
+    return JSON.parse(localStorage.getItem('forumData') || '[]');
+  }
+  function setForumData(data) {
+    localStorage.setItem('forumData', JSON.stringify(data));
+  }
+  function renderForum() {
+    const forum = getForumData();
+    let html = '';
+    if(forum.length === 0) {
+      html = '<div class="alert alert-warning">Belum ada topik diskusi.</div>';
+    } else {
+      forum.forEach((t, i) => {
+        html += `<div class='card mb-3'><div class='card-body'>
+          <b>${t.topic}</b> <span class='badge bg-secondary'>${t.name}</span><br>
+          <div class='mb-2'>${t.content}</div>
+          <div class='ms-3'>${t.replies.map((r, j) => `<div class='border-start ps-2 mb-1'><b>${r.name}:</b> ${r.content}</div>`).join('')}</div>
+          <form onsubmit='return replyForum(event,${i})' class='mt-2 d-flex'>
+            <input type='text' class='form-control me-2' name='replyName' placeholder='Nama' maxlength='30' required style='max-width:120px;'>
+            <input type='text' class='form-control me-2' name='replyContent' placeholder='Balasan...' maxlength='200' required>
+            <button class='btn btn-sm btn-success'>Balas</button>
+          </form>
+        </div></div>`;
+      });
+    }
+    document.getElementById('forumList').innerHTML = html;
+  }
+  window.replyForum = function(e, idx) {
+    e.preventDefault();
+    const name = e.target.replyName.value.trim();
+    const content = e.target.replyContent.value.trim();
+    if(!name || !content) return false;
+    let forum = getForumData();
+    forum[idx].replies.push({ name, content });
+    setForumData(forum);
+    renderForum();
+    return false;
+  };
+  document.getElementById('forumForm').onsubmit = function(e) {
+    e.preventDefault();
+    const name = document.getElementById('forumName').value.trim();
+    const topic = document.getElementById('forumTopic').value.trim();
+    const content = document.getElementById('forumContent').value.trim();
+    if(!name || !topic || !content) return;
+    let forum = getForumData();
+    forum.unshift({ name, topic, content, replies: [] });
+    setForumData(forum);
+    this.reset();
+    renderForum();
+  };
+  // Berita & Pengumuman untuk guru
+  function renderNewsGuru() {
+    console.log('[DEBUG] renderNewsGuru dipanggil');
+    const news = JSON.parse(localStorage.getItem('newsData') || '[]');
+    let html = '';
+    if(news.length === 0) {
+      html = '<div class="alert alert-warning">Belum ada berita/pengumuman dari admin.</div>';
+    } else {
+      news.forEach(n => {
+        html += `<div class='card mb-2 p-2'><b>${n.title}</b><div>${n.content}</div></div>`;
+      });
+    }
+    document.getElementById('newsGuruList').innerHTML = html;
+  }
+  // Sidebar profil logic
+  function getProfileGuru() {
+    return JSON.parse(localStorage.getItem('profileGuru') || '{"name":"Guru","desc":"Deskripsi singkat guru.","photo":"assets/img/user-default.png"}');
+  }
+  function setProfileGuru(data) {
+    localStorage.setItem('profileGuru', JSON.stringify(data));
+  }
+  function renderSidebarProfile() {
+    const p = getProfileGuru();
+    document.getElementById('sidebarName').textContent = p.name;
+    document.getElementById('sidebarDesc').textContent = p.desc;
+    document.getElementById('sidebarPhoto').src = p.photo || 'assets/img/user-default.png';
+  }
+  function showEditProfile() {
+    const p = getProfileGuru();
+    document.getElementById('editName').value = p.name;
+    document.getElementById('editDesc').value = p.desc;
+    if(p.photo && p.photo !== 'assets/img/user-default.png') {
+      editPhotoPreview.src = p.photo;
+      editPhotoPreview.style.display = 'block';
+      document.getElementById('editPhotoText').style.display = 'none';
+    } else {
+      editPhotoPreview.style.display = 'none';
+      document.getElementById('editPhotoText').style.display = '';
+    }
+    document.getElementById('editProfileModal').classList.add('show');
+  }
+  function closeEditProfile() {
+    document.getElementById('editProfileModal').classList.remove('show');
+  }
+  // Drag & drop foto edit profil guru
+  const editPhotoDrop = document.getElementById('editPhotoDrop');
+  const editPhotoInput = document.getElementById('editPhoto');
+  const editPhotoPreview = document.getElementById('editPhotoPreview');
+  let editPhotoData = '';
+  editPhotoDrop.addEventListener('click', () => editPhotoInput.click());
+  editPhotoDrop.addEventListener('dragover', e => { e.preventDefault(); editPhotoDrop.classList.add('dragover'); });
+  editPhotoDrop.addEventListener('dragleave', e => { e.preventDefault(); editPhotoDrop.classList.remove('dragover'); });
+  editPhotoDrop.addEventListener('drop', e => {
+    e.preventDefault(); editPhotoDrop.classList.remove('dragover');
+    handleEditPhoto(e.dataTransfer.files[0]);
+  });
+  editPhotoInput.addEventListener('change', e => {
+    handleEditPhoto(e.target.files[0]);
+  });
+  function handleEditPhoto(file) {
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      editPhotoData = evt.target.result;
+      editPhotoPreview.src = editPhotoData;
+      editPhotoPreview.style.display = 'block';
+      document.getElementById('editPhotoText').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+  // Update profil guru dengan foto baru
+  const editProfileForm = document.getElementById('editProfileForm');
+  editProfileForm.onsubmit = function(e) {
+    e.preventDefault();
+    const name = document.getElementById('editName').value.trim();
+    const desc = document.getElementById('editDesc').value.trim();
+    let p = getProfileGuru();
+    p.name = name;
+    p.desc = desc;
+    if(editPhotoData) {
+      p.photo = editPhotoData;
+    }
+    setProfileGuru(p);
+    renderSidebarProfile();
+    closeEditProfile();
+    editPhotoPreview.style.display = 'none';
+    document.getElementById('editPhotoText').style.display = '';
+    editPhotoData = '';
+  };
+  renderQuizEdit();
+  renderMateriList();
+  renderForum();
+  renderNewsGuru();
+  renderSidebarProfile();
+
+  // Sidebar menu logic
+  const menuMap = {
+    menuMateri: 'sectionMateri',
+    menuQuiz: 'sectionQuiz',
+    menuForum: 'sectionForum',
+    menuNews: 'sectionNews'
+  };
+  Object.keys(menuMap).forEach(menuId => {
+    document.getElementById(menuId).onclick = function(e) {
+      e.preventDefault();
+      // Set active
+      Object.keys(menuMap).forEach(mid => document.getElementById(mid).classList.remove('active'));
+      this.classList.add('active');
+      // Show/hide section
+      Object.values(menuMap).forEach(secId => document.getElementById(secId).style.display = 'none');
+      document.getElementById(menuMap[menuId]).style.display = '';
+      // Panggil render sesuai menu
+      if(menuId === 'menuMateri') renderMateriList();
+      if(menuId === 'menuQuiz') renderQuizEdit();
+      if(menuId === 'menuForum') renderForum();
+      if(menuId === 'menuNews') renderNewsGuru();
+    };
+  });
+});
+  </script>
+
+<!-- Modal Edit Profil Guru -->
+<div class="modal" id="editProfileModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content p-4" style="max-width:400px;">
+      <h5 class="mb-3">Edit Profil Guru</h5>
+      <form id="editProfileForm">
+        <div class="mb-3">
+          <label for="editName" class="form-label">Nama</label>
+          <input type="text" class="form-control" id="editName" required>
+        </div>
+        <div class="mb-3">
+          <label for="editDesc" class="form-label">Deskripsi</label>
+          <textarea class="form-control" id="editDesc" rows="2"></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Foto Profil</label>
+          <div id="editPhotoDrop" class="drag-area mb-2" style="cursor:pointer;min-height:80px;">
+            <span id="editPhotoText">Tarik/lepas foto di sini atau klik untuk pilih file</span>
+            <img id="editPhotoPreview" src="" alt="Preview" style="display:none;max-width:100px;max-height:100px;" class="mt-2 rounded-circle">
+            <input type="file" id="editPhoto" accept="image/*" style="display:none;">
+          </div>
+        </div>
+        <div class="d-flex justify-content-end">
+          <button type="button" class="btn btn-secondary me-2" onclick="closeEditProfile()">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<!-- Start Footer -->
+    <footer class="cs_footer cs_blue_bg cs_bg_filed cs_white_color" data-src="assets/img/footer_bg.jpg">
+        <div class="cs_footer_bottom cs_primary_bg">
+          <div class="container">
+            <div class="cs_footer_bottom_in">
+              <p class="cs_footer_copyright mb-0">Copyright © 2025 KLMPK-8, All Rights Reserved.</p>
+            </div>
+          </div>
+        </div>
+      </footer>
+    <!-- End Footer -->
+</body>
+</html>

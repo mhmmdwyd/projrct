@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Admin</title>
+  <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    body { background: #f8f9fa; }
+    .sidebar {
+      min-height: 100vh;
+      background: #0d6efd;
+      color: #fff;
+      padding: 2rem 1rem;
+      box-shadow: 2px 0 12px rgba(0,0,0,0.04);
+    }
+    .sidebar h2 { color: #fff; }
+    .sidebar a { color: #fff; display: block; margin: 1rem 0; text-decoration: none; }
+    .sidebar a.active, .sidebar a:hover { font-weight: bold; text-decoration: underline; }
+    .content { padding: 2rem; }
+    .table-users th, .table-users td { vertical-align: middle; }
+    .sidebar-link {
+      color: #fff;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-weight: 500;
+      transition: background 0.2s, color 0.2s;
+    }
+    .sidebar-link.active, .sidebar-link:hover {
+      background: #fff;
+      color: #0d6efd !important;
+      text-decoration: none;
+    }
+    .user-profile {
+      background: rgba(255,255,255,0.12);
+      border-radius: 12px;
+    }
+    .modal { display:none; position:fixed; z-index:9999; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); align-items:center; justify-content:center; }
+    .modal.show { display:flex; }
+    .drag-area {
+      border: 2px dashed #0d6efd;
+      border-radius: 10px;
+      padding: 0.5rem;
+      text-align: center;
+      background: #f8f9fa;
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+    .drag-area.dragover { background: #e3f0ff; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <nav class="col-md-2 sidebar d-flex flex-column align-items-center">
+        <a class="cs_site_branding d-block mb-3" href="index.html">
+          <img src="assets/img/logo.svg" alt="Logo Admin" style="max-width:200px; width:100%;">
+        </a>
+        <div class="user-profile text-center mb-4 p-3 w-100" style="background:rgba(255,255,255,0.12);border-radius:12px;">
+          <div class="rounded-circle bg-white d-inline-flex align-items-center justify-content-center mb-2 overflow-hidden" style="width:64px;height:64px;">
+            <img id="sidebarPhoto" src="assets/img/user-default.png" alt="Foto Profil" style="width:100%;height:100%;object-fit:cover;">
+          </div>
+          <div class="fw-bold" id="sidebarName">Super Admin</div>
+          <div class="small" id="sidebarUsername">superadmin</div>
+          <span class="badge bg-warning text-dark mt-1">Admin</span>
+          <div class="small mt-2" id="sidebarDesc">Administrator platform.</div>
+          <button class="btn btn-light btn-sm mt-2" onclick="showEditProfile()"><i class="fa fa-edit"></i> Edit Profil</button>
+        </div>
+        <div class="nav flex-column w-100">
+          <a href="#" class="nav-link sidebar-link active" id="menuUsers"><i class="fa fa-users me-2"></i> Kelola User</a>
+          <a href="#" class="nav-link sidebar-link" id="menuNews"><i class="fa fa-bullhorn me-2"></i> Berita & Pengumuman</a>
+          <a href="#" class="nav-link sidebar-link" id="menuLain"><i class="fa fa-cogs me-2"></i> Menu Lain (Coming Soon)</a>
+        </div>
+      </nav>
+      <main class="col-md-10 content">
+        <div id="editProfileModal" class="modal" tabindex="-1">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Edit Profil</h5>
+                <button type="button" class="btn-close" onclick="closeEditProfile()"></button>
+              </div>
+              <div class="modal-body">
+                <form id="editProfileForm">
+                  <div class="mb-3">
+                    <label class="form-label" for="editName">Nama</label>
+                    <input type="text" class="form-control" id="editName" required>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label" for="editDesc">Deskripsi</label>
+                    <textarea class="form-control" id="editDesc"></textarea>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label" for="editPhoto">Foto Profil</label>
+                    <input type="file" class="form-control" id="editPhoto" accept="image/*">
+                  </div>
+                  <button type="submit" class="btn btn-primary">Simpan</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="adminUsers">
+          <h3>Daftar User</h3>
+          <h3>Tambah User Baru</h3>
+          <form id="adminAddUserForm" class="row g-2 mb-4">
+            <div class="col-md-3">
+              <input type="text" class="form-control" id="addName" placeholder="Nama Lengkap" required>
+            </div>
+            <div class="col-md-3">
+              <input type="text" class="form-control" id="addUsername" placeholder="Username" required>
+            </div>
+            <div class="col-md-2">
+              <input type="password" class="form-control" id="addPassword" placeholder="Password" required>
+            </div>
+            <div class="col-md-2">
+              <select class="form-control" id="addRole" required>
+                <option value="">Pilih Role</option>
+                <option value="guru">Guru</option>
+                <option value="siswa">Siswa</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <div id="addPhotoDrop" class="drag-area mb-2" style="min-height:40px;cursor:pointer;">
+                <div id="addPhotoText">Drag & drop foto di sini atau klik</div>
+                <input type="file" id="addPhotoInput" accept="image/*" style="display:none;">
+                <img id="addPhotoPreview" src="assets/img/user-default.png" alt="Preview Foto" style="display:none;max-width:100%;max-height:40px;border-radius:8px;">
+              </div>
+            </div>
+            <div class="col-md-12">
+              <button type="submit" class="btn btn-success w-100">Tambah</button>
+            </div>
+          </form>
+          <div id="userTableWrap"></div>
+        </div>
+        <div id="adminNews" class="mb-5" style="display:none;">
+          <h3>Berita & Pengumuman</h3>
+          <form id="newsForm" class="mb-3">
+            <input type="text" class="form-control mb-2" id="newsTitle" placeholder="Judul berita/pengumuman" required>
+            <textarea class="form-control mb-2" id="newsContent" placeholder="Isi berita/pengumuman" required></textarea>
+            <button type="submit" class="btn btn-primary">Tambah/Update</button>
+          </form>
+          <div id="newsList"></div>
+        </div>
+        <div id="adminLain" style="display:none;">
+          <h3>Menu Lain</h3>
+          <p>Fitur akan ditambahkan di sini.</p>
+        </div>
+      </main>
+    </div>
+  </div>
+  <div id="adminLoginWrap" style="max-width:400px;margin:60px auto;display:none;">
+    <div class="card p-4 shadow">
+      <h4 class="mb-3">Login Super User</h4>
+      <form id="adminLoginForm">
+        <div class="mb-3">
+          <label for="adminUsername" class="form-label">Username</label>
+          <input type="text" class="form-control" id="adminUsername" required>
+        </div>
+        <div class="mb-3">
+          <label for="adminPassword" class="form-label">Password</label>
+          <input type="password" class="form-control" id="adminPassword" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Login</button>
+      </form>
+    </div>
+  </div>
+  <script src="assets/js/bootstrap.min.js"></script>
+  <script>
+    // Super user login protection
+    const SUPER_USER = { username: 'superadmin', password: 'superadmin' };
+    function isSuperUserLoggedIn() {
+      return localStorage.getItem('superUserLoggedIn') === 'true';
+    }
+    function showDashboard(show) {
+      document.querySelector('.container-fluid').style.display = show ? '' : 'none';
+      document.getElementById('adminLoginWrap').style.display = show ? 'none' : '';
+    }
+    if (!isSuperUserLoggedIn()) {
+      showDashboard(false);
+    } else {
+      showDashboard(true);
+    }
+    document.getElementById('adminLoginForm').onsubmit = function(e) {
+      e.preventDefault();
+      const username = document.getElementById('adminUsername').value;
+      const password = document.getElementById('adminPassword').value;
+      if(username === SUPER_USER.username && password === SUPER_USER.password) {
+        localStorage.setItem('superUserLoggedIn', 'true');
+        showDashboard(true);
+      } else {
+        alert('Username atau password super user salah!');
+      }
+    };
+    function renderUserTable() {
+      let users = JSON.parse(localStorage.getItem('users') || '[]');
+      let html = '<table class="table table-bordered table-users"><thead><tr><th>No</th><th>Nama</th><th>Username</th><th>Role</th><th>Aksi</th></tr></thead><tbody>';
+      if(users.length === 0) {
+        html += '<tr><td colspan="5" class="text-center">Belum ada user</td></tr>';
+      } else {
+        users.forEach((u, i) => {
+          html += `<tr><td>${i+1}</td><td>${u.name}</td><td>${u.username}</td><td>${u.role}</td><td><button class='btn btn-danger btn-sm' onclick='deleteUserAdmin(${i})'>Hapus</button></td></tr>`;
+        });
+      }
+      html += '</tbody></table>';
+      document.getElementById('userTableWrap').innerHTML = html;
+    }
+    window.deleteUserAdmin = function(idx) {
+      let users = JSON.parse(localStorage.getItem('users') || '[]');
+      users.splice(idx, 1);
+      localStorage.setItem('users', JSON.stringify(users));
+      renderUserTable();
+    };
+    // Drag & drop foto tambah user
+    const addPhotoDrop = document.getElementById('addPhotoDrop');
+    const addPhotoInput = document.getElementById('addPhotoInput');
+    const addPhotoPreview = document.getElementById('addPhotoPreview');
+    let addPhotoData = '';
+    addPhotoDrop.addEventListener('click', () => addPhotoInput.click());
+    addPhotoDrop.addEventListener('dragover', e => { e.preventDefault(); addPhotoDrop.classList.add('dragover'); });
+    addPhotoDrop.addEventListener('dragleave', e => { e.preventDefault(); addPhotoDrop.classList.remove('dragover'); });
+    addPhotoDrop.addEventListener('drop', e => {
+      e.preventDefault(); addPhotoDrop.classList.remove('dragover');
+      handleAddPhoto(e.dataTransfer.files[0]);
+    });
+    addPhotoInput.addEventListener('change', e => {
+      handleAddPhoto(e.target.files[0]);
+    });
+    function handleAddPhoto(file) {
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        addPhotoData = evt.target.result;
+        addPhotoPreview.src = addPhotoData;
+        addPhotoPreview.style.display = 'block';
+        document.getElementById('addPhotoText').style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+    // Tambah user dengan foto
+    const adminAddUserForm = document.getElementById('adminAddUserForm');
+    adminAddUserForm.onsubmit = function(e) {
+      e.preventDefault();
+      const name = document.getElementById('addName').value.trim();
+      const username = document.getElementById('addUsername').value.trim();
+      const password = document.getElementById('addPassword').value;
+      const role = document.getElementById('addRole').value;
+      const photo = addPhotoData || 'assets/img/user-default.png';
+      if(!name || !username || !password || !role) {
+        alert('Semua field wajib diisi!');
+        return;
+      }
+      let users = JSON.parse(localStorage.getItem('users') || '[]');
+      if(users.find(u => u.username === username)) {
+        alert('Username sudah terdaftar!');
+        return;
+      }
+      users.push({ name, username, password, role, photo });
+      localStorage.setItem('users', JSON.stringify(users));
+      renderUserTable();
+      this.reset();
+      addPhotoPreview.style.display = 'none';
+      document.getElementById('addPhotoText').style.display = '';
+      addPhotoData = '';
+      alert('User berhasil ditambahkan!');
+    };
+    // Sidebar menu logic
+    document.getElementById('menuUsers').onclick = function() {
+      document.getElementById('adminUsers').style.display = '';
+      document.getElementById('adminNews').style.display = 'none';
+      document.getElementById('adminLain').style.display = 'none';
+      this.classList.add('active');
+      document.getElementById('menuNews').classList.remove('active');
+      document.getElementById('menuLain').classList.remove('active');
+    };
+    document.getElementById('menuNews').onclick = function() {
+      document.getElementById('adminUsers').style.display = 'none';
+      document.getElementById('adminNews').style.display = '';
+      document.getElementById('adminLain').style.display = 'none';
+      this.classList.add('active');
+      document.getElementById('menuUsers').classList.remove('active');
+      document.getElementById('menuLain').classList.remove('active');
+    };
+    document.getElementById('menuLain').onclick = function() {
+      document.getElementById('adminUsers').style.display = 'none';
+      document.getElementById('adminNews').style.display = 'none';
+      document.getElementById('adminLain').style.display = '';
+      this.classList.add('active');
+      document.getElementById('menuUsers').classList.remove('active');
+      document.getElementById('menuNews').classList.remove('active');
+    };
+    // Berita & Pengumuman
+    function getNewsData() {
+      return JSON.parse(localStorage.getItem('newsData') || '[]');
+    }
+    function setNewsData(data) {
+      localStorage.setItem('newsData', JSON.stringify(data));
+    }
+    function renderNews() {
+      const news = getNewsData();
+      let html = '';
+      if(news.length === 0) {
+        html = '<div class="alert alert-warning">Belum ada berita/pengumuman.</div>';
+      } else {
+        news.forEach((n, i) => {
+          html += `<div class='card mb-2 p-2'><b>${n.title}</b><div>${n.content}</div><button class='btn btn-danger btn-sm mt-2' onclick='deleteNews(${i})'>Hapus</button></div>`;
+        });
+      }
+      document.getElementById('newsList').innerHTML = html;
+    }
+    window.deleteNews = function(idx) {
+      let news = getNewsData();
+      news.splice(idx, 1);
+      setNewsData(news);
+      renderNews();
+    };
+    document.getElementById('newsForm').onsubmit = function(e) {
+      e.preventDefault();
+      const title = document.getElementById('newsTitle').value.trim();
+      const content = document.getElementById('newsContent').value.trim();
+      if(!title || !content) return;
+      let news = getNewsData();
+      news.unshift({ title, content });
+      setNewsData(news);
+      this.reset();
+      renderNews();
+    };
+    // Sidebar profil logic
+    function getProfileAdmin() {
+      return JSON.parse(localStorage.getItem('profileAdmin') || '{"name":"Super Admin","desc":"Administrator platform.","photo":"assets/img/user-default.png"}');
+    }
+    function setProfileAdmin(data) {
+      localStorage.setItem('profileAdmin', JSON.stringify(data));
+    }
+    function renderSidebarProfile() {
+      const p = getProfileAdmin();
+      document.getElementById('sidebarName').textContent = p.name;
+      document.getElementById('sidebarDesc').textContent = p.desc;
+      document.getElementById('sidebarPhoto').src = p.photo || 'assets/img/user-default.png';
+    }
+    function showEditProfile() {
+      const p = getProfileAdmin();
+      document.getElementById('editName').value = p.name;
+      document.getElementById('editDesc').value = p.desc;
+      document.getElementById('editProfileModal').classList.add('show');
+    }
+    function closeEditProfile() {
+      document.getElementById('editProfileModal').classList.remove('show');
+    }
+    document.getElementById('editProfileForm').onsubmit = function(e) {
+      e.preventDefault();
+      const name = document.getElementById('editName').value.trim();
+      const desc = document.getElementById('editDesc').value.trim();
+      const photoInput = document.getElementById('editPhoto');
+      let p = getProfileAdmin();
+      p.name = name;
+      p.desc = desc;
+      if(photoInput.files && photoInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          p.photo = evt.target.result;
+          setProfileAdmin(p);
+          renderSidebarProfile();
+          closeEditProfile();
+        };
+        reader.readAsDataURL(photoInput.files[0]);
+        return;
+      }
+      setProfileAdmin(p);
+      renderSidebarProfile();
+      closeEditProfile();
+    };
+    renderSidebarProfile();
+    renderUserTable();
+    renderNews();
+  </script>
+  <!-- Start Footer -->
+    <footer class="cs_footer cs_blue_bg cs_bg_filed cs_white_color" data-src="assets/img/footer_bg.jpg">
+        <div class="cs_footer_bottom cs_primary_bg">
+          <div class="container">
+            <div class="cs_footer_bottom_in">
+              <p class="cs_footer_copyright mb-0">Copyright © 2025 KLMPK-8, All Rights Reserved.</p>
+            </div>
+          </div>
+        </div>
+      </footer>
+    <!-- End Footer -->
+</body>
+</html>

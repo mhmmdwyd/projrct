@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="assets/img/favicon.png">
+  <title>Dashboard Siswa - LMS SMP Ilmu Teknologi</title>
+  <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+  <link rel="stylesheet" href="assets/css/fontawesome.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .drag-area {
+      border: 2px dashed #0d6efd;
+      border-radius: 10px;
+      padding: 2rem;
+      text-align: center;
+      background: #f8f9fa;
+      transition: background 0.2s;
+    }
+    .drag-area.dragover {
+      background: #e3f0ff;
+    }
+    .materi-card {
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      margin-bottom: 2rem;
+    }
+    .materi-card img, .materi-card video { max-width: 100%; border-radius: 8px; }
+    .sidebar {
+      min-height: 100vh;
+      background: #0d6efd;
+      color: #fff;
+      padding: 2rem 1rem;
+      box-shadow: 2px 0 12px rgba(0,0,0,0.04);
+    }
+    .sidebar-link {
+      color: #fff;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-weight: 500;
+      transition: background 0.2s, color 0.2s;
+    }
+    .sidebar-link.active, .sidebar-link:hover {
+      background: #fff;
+      color: #0d6efd !important;
+      text-decoration: none;
+    }
+    .user-profile {
+      background: rgba(255,255,255,0.12);
+      border-radius: 12px;
+    }
+    .modal { display:none; position:fixed; z-index:9999; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); align-items:center; justify-content:center; }
+    .modal.show { display:flex; }
+  </style>
+</head>
+<body>
+  <header class="py-3 bg-primary text-white mb-4">
+    <div class="container d-flex justify-content-between align-items-center">
+      <h2 class="mb-0">Dashboard Siswa - LMS SMP Ilmu Teknologi</h2>
+      <a href="index.html" class="btn btn-light">Logout</a>
+    </div>
+  </header>
+  <div class="container-fluid">
+    <div class="row">
+      <nav class="col-md-2 sidebar d-flex flex-column align-items-center">
+        <a class="cs_site_branding d-block mb-3" href="index.html">
+          <img src="assets/img/logo.svg" alt="Logo Siswa" style="max-width:200px; width:100%;">
+        </a>
+        <div class="user-profile text-center mb-4 p-3 w-100" style="background:rgba(255,255,255,0.12);border-radius:12px;">
+          <div class="rounded-circle bg-white d-inline-flex align-items-center justify-content-center mb-2 overflow-hidden" style="width:64px;height:64px;">
+            <img id="sidebarPhoto" src="assets/img/user-default.png" alt="Foto Profil" style="width:100%;height:100%;object-fit:cover;">
+          </div>
+          <div class="fw-bold" id="sidebarName">Siswa</div>
+          <div class="small" id="sidebarUsername">siswa</div>
+          <span class="badge bg-primary text-white mt-1">Siswa</span>
+          <div class="small mt-2" id="sidebarDesc">Deskripsi singkat siswa.</div>
+          <button class="btn btn-light btn-sm mt-2" onclick="showEditProfile()"><i class="fa fa-edit"></i> Edit Profil</button>
+        </div>
+        <div class="nav flex-column w-100">
+          <a href="#" class="nav-link sidebar-link active" id="menuMateri"><i class="fa fa-book me-2"></i> Materi</a>
+          <a href="#" class="nav-link sidebar-link" id="menuQuiz"><i class="fa fa-question-circle me-2"></i> Kuis</a>
+          <a href="#" class="nav-link sidebar-link" id="menuForum"><i class="fa fa-comments me-2"></i> Forum</a>
+          <a href="#" class="nav-link sidebar-link" id="menuNews"><i class="fa fa-bullhorn me-2"></i> Berita</a>
+        </div>
+      </nav>
+      <main class="col-md-10 content">
+        <!-- Tambahkan area drag & drop tugas siswa di section materi -->
+        <section id="sectionMateri" class="mb-5">
+          <h3 class="mb-3 text-primary">Materi Pembelajaran Interaktif</h3>
+          <div id="materiSiswaList"></div>
+          <div id="dropArea" class="drag-area mt-4">
+            <span>Tarik/lepas file tugas di sini atau klik untuk pilih file</span>
+            <input type="file" id="fileInput" style="display:none;">
+            <div id="fileList"></div>
+          </div>
+        </section>
+        <section id="sectionQuiz" class="mb-5" style="display:none;">
+          <h3 class="mb-3 text-success">Kuis Interaktif</h3>
+          <div id="quizArea"></div>
+          <div id="quizResult" class="mt-3"></div>
+        </section>
+        <!-- Forum Section: Sudah ada, hanya update tampilan dan validasi -->
+        <section id="sectionForum" class="mb-5" style="display:none;">
+          <h3 class="mb-3 text-info">Forum Diskusi</h3>
+          <div class="card p-3 mb-3">
+            <form id="forumForm">
+              <div class="mb-2">
+                <input type="text" class="form-control" id="forumName" placeholder="Nama Anda" maxlength="30" required>
+              </div>
+              <div class="mb-2">
+                <input type="text" class="form-control" id="forumTopic" placeholder="Judul/topik pertanyaan" maxlength="60" required>
+              </div>
+              <div class="mb-2">
+                <textarea class="form-control" id="forumContent" placeholder="Tulis pertanyaan atau diskusi..." maxlength="300" required></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary">Kirim Topik</button>
+            </form>
+          </div>
+          <div id="forumList"></div>
+        </section>
+        <section id="sectionNews" class="mb-5" style="display:none;">
+          <h3 class="mb-3 text-warning">Berita & Pengumuman</h3>
+          <div id="newsSiswaList"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Drag & Drop logic
+      const dropArea = document.getElementById('dropArea');
+      const fileInput = document.getElementById('fileInput');
+      const fileList = document.getElementById('fileList');
+      dropArea.addEventListener('click', () => fileInput.click());
+      dropArea.addEventListener('dragover', e => {
+        e.preventDefault();
+        dropArea.classList.add('dragover');
+      });
+      dropArea.addEventListener('dragleave', e => {
+        e.preventDefault();
+        dropArea.classList.remove('dragover');
+      });
+      dropArea.addEventListener('drop', e => {
+        e.preventDefault();
+        dropArea.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+      });
+      fileInput.addEventListener('change', e => {
+        handleFiles(e.target.files);
+      });
+      function handleFiles(files) {
+        fileList.innerHTML = '';
+        for(let i=0; i<files.length; i++) {
+          const file = files[i];
+          const el = document.createElement('div');
+          el.textContent = `Tugas: ${file.name}`;
+          el.className = 'alert alert-info py-2 px-3 mt-2';
+          fileList.appendChild(el);
+        }
+        alert('Tugas berhasil diunggah (simulasi, file tidak benar-benar dikirim ke server).');
+      }
+
+      // Kuis Interaktif Siswa
+      function getQuizData() {
+        // Ambil soal dari localStorage, jika belum ada gunakan default
+        let quiz = JSON.parse(localStorage.getItem('quizData') || 'null');
+        if (!quiz) {
+          quiz = [
+            {
+              question: 'Apa kepanjangan dari "IT" dalam dunia teknologi?',
+              options: ['Information Technology', 'Internet Tools', 'Input Terminal', 'Image Transfer'],
+              answer: 0
+            },
+            {
+              question: 'Manakah yang termasuk perangkat keras komputer?',
+              options: ['Microsoft Word', 'Monitor', 'Google Chrome', 'Linux'],
+              answer: 1
+            }
+          ];
+          localStorage.setItem('quizData', JSON.stringify(quiz));
+        }
+        return quiz;
+      }
+      function renderQuiz() {
+        console.log('[DEBUG] renderQuiz dipanggil');
+        const quiz = getQuizData();
+        let html = '';
+        quiz.forEach((q, i) => {
+          html += `<div class='card p-3 mb-3'><b>${i+1}. ${q.question}</b><div class='mt-2'>`;
+          q.options.forEach((opt, j) => {
+            html += `<div class='form-check'><input class='form-check-input' type='radio' name='quiz${i}' id='quiz${i}_opt${j}' value='${j}'> <label class='form-check-label' for='quiz${i}_opt${j}'>${opt}</label></div>`;
+          });
+          html += '</div></div>';
+        });
+        html += `<button class='btn btn-primary' onclick='submitQuiz()'>Submit Jawaban</button>`;
+        document.getElementById('quizArea').innerHTML = html;
+        document.getElementById('quizResult').innerHTML = '';
+      }
+      window.submitQuiz = function() {
+        const quiz = getQuizData();
+        let benar = 0;
+        let total = quiz.length;
+        let feedback = '';
+        quiz.forEach((q, i) => {
+          const selected = document.querySelector(`input[name=quiz${i}]:checked`);
+          if(selected) {
+            if(parseInt(selected.value) === q.answer) {
+              benar++;
+              feedback += `<div class='text-success'>Soal ${i+1}: Benar!</div>`;
+            } else {
+              feedback += `<div class='text-danger'>Soal ${i+1}: Salah. Jawaban benar: <b>${q.options[q.answer]}</b></div>`;
+            }
+          } else {
+            feedback += `<div class='text-warning'>Soal ${i+1}: Belum dijawab.</div>`;
+          }
+        });
+        document.getElementById('quizResult').innerHTML = `<div class='alert alert-info'>Skor Anda: <b>${benar}/${total}</b></div>` + feedback;
+      };
+      renderQuiz();
+
+      // Forum Diskusi Siswa & Guru
+      function getForumData() {
+        return JSON.parse(localStorage.getItem('forumData') || '[]');
+      }
+      function setForumData(data) {
+        localStorage.setItem('forumData', JSON.stringify(data));
+      }
+      function renderForum() {
+        const forum = getForumData();
+        let html = '';
+        if(forum.length === 0) {
+          html = '<div class="alert alert-warning">Belum ada topik diskusi.</div>';
+        } else {
+          forum.forEach((t, i) => {
+            html += `<div class='card mb-3'><div class='card-body'>
+              <b>${t.topic}</b> <span class='badge bg-secondary'>${t.name}</span><br>
+              <div class='mb-2'>${t.content}</div>
+              <div class='ms-3'>${t.replies.map((r, j) => `<div class='border-start ps-2 mb-1'><b>${r.name}:</b> ${r.content}</div>`).join('')}</div>
+              <form onsubmit='return replyForum(event,${i})' class='mt-2 d-flex'>
+                <input type='text' class='form-control me-2' name='replyName' placeholder='Nama' maxlength='30' required style='max-width:120px;'>
+                <input type='text' class='form-control me-2' name='replyContent' placeholder='Balasan...' maxlength='200' required>
+                <button class='btn btn-sm btn-success'>Balas</button>
+              </form>
+            </div></div>`;
+          });
+        }
+        document.getElementById('forumList').innerHTML = html;
+      }
+      window.replyForum = function(e, idx) {
+        e.preventDefault();
+        const name = e.target.replyName.value.trim();
+        const content = e.target.replyContent.value.trim();
+        if(!name || !content) return false;
+        let forum = getForumData();
+        forum[idx].replies.push({ name, content });
+        setForumData(forum);
+        renderForum();
+        return false;
+      };
+      document.getElementById('forumForm').onsubmit = function(e) {
+        e.preventDefault();
+        const name = document.getElementById('forumName').value.trim();
+        const topic = document.getElementById('forumTopic').value.trim();
+        const content = document.getElementById('forumContent').value.trim();
+        if(!name || !topic || !content) return;
+        let forum = getForumData();
+        forum.unshift({ name, topic, content, replies: [] });
+        setForumData(forum);
+        this.reset();
+        renderForum();
+      };
+      renderForum();
+
+      // Materi Siswa: tampilkan materi yang diunggah guru
+      function renderMateriSiswa() {
+        console.log('[DEBUG] renderMateriSiswa dipanggil');
+        const materi = JSON.parse(localStorage.getItem('materiData') || '[]');
+        let html = '';
+        if(materi.length === 0) {
+          html = '<div class="alert alert-warning">Belum ada materi diunggah oleh guru.</div>';
+        } else {
+          materi.forEach(m => {
+            if(m.type.startsWith('image/')) {
+              html += `<div class='card p-3 mb-3'><b>${m.name}</b><img src='${m.content}' class='img-fluid mt-2'></div>`;
+            } else if(m.type.startsWith('video/')) {
+              html += `<div class='card p-3 mb-3'><b>${m.name}</b><video controls class='w-100 mt-2'><source src='${m.content}' type='${m.type}'></video></div>`;
+            } else {
+              html += `<div class='card p-3 mb-3'><b>${m.name}</b><a href='${m.content}' download class='btn btn-sm btn-outline-primary mt-2'>Download</a></div>`;
+            }
+          });
+        }
+        document.getElementById('materiSiswaList').innerHTML = html;
+      }
+      renderMateriSiswa();
+
+      // Berita & Pengumuman untuk siswa
+      function renderNewsSiswa() {
+        console.log('[DEBUG] renderNewsSiswa dipanggil');
+        const news = JSON.parse(localStorage.getItem('newsData') || '[]');
+        let html = '';
+        if(news.length === 0) {
+          html = '<div class="alert alert-warning">Belum ada berita/pengumuman dari admin.</div>';
+        } else {
+          news.forEach(n => {
+            html += `<div class='card mb-2 p-2'><b>${n.title}</b><div>${n.content}</div></div>`;
+          });
+        }
+        document.getElementById('newsSiswaList').innerHTML = html;
+      }
+      renderNewsSiswa();
+
+      // Sidebar profil logic
+      function getProfileSiswa() {
+        return JSON.parse(localStorage.getItem('profileSiswa') || '{"name":"Siswa","desc":"Deskripsi singkat siswa.","photo":"assets/img/user-default.png"}');
+      }
+      function setProfileSiswa(data) {
+        localStorage.setItem('profileSiswa', JSON.stringify(data));
+      }
+      function renderSidebarProfile() {
+        const p = getProfileSiswa();
+        document.getElementById('sidebarName').textContent = p.name;
+        document.getElementById('sidebarDesc').textContent = p.desc;
+        document.getElementById('sidebarPhoto').src = p.photo || 'assets/img/user-default.png';
+      }
+      function showEditProfile() {
+        const p = getProfileSiswa();
+        document.getElementById('editName').value = p.name;
+        document.getElementById('editDesc').value = p.desc;
+        if(p.photo && p.photo !== 'assets/img/user-default.png') {
+          editPhotoPreview.src = p.photo;
+          editPhotoPreview.style.display = 'block';
+          document.getElementById('editPhotoText').style.display = 'none';
+        } else {
+          editPhotoPreview.style.display = 'none';
+          document.getElementById('editPhotoText').style.display = '';
+        }
+        document.getElementById('editProfileModal').classList.add('show');
+      }
+      function closeEditProfile() {
+        document.getElementById('editProfileModal').classList.remove('show');
+      }
+      // Drag & drop foto edit profil siswa
+      const editPhotoDrop = document.getElementById('editPhotoDrop');
+      const editPhotoInput = document.getElementById('editPhoto');
+      const editPhotoPreview = document.getElementById('editPhotoPreview');
+      let editPhotoData = '';
+      editPhotoDrop.addEventListener('click', () => editPhotoInput.click());
+      editPhotoDrop.addEventListener('dragover', e => { e.preventDefault(); editPhotoDrop.classList.add('dragover'); });
+      editPhotoDrop.addEventListener('dragleave', e => { e.preventDefault(); editPhotoDrop.classList.remove('dragover'); });
+      editPhotoDrop.addEventListener('drop', e => {
+        e.preventDefault(); editPhotoDrop.classList.remove('dragover');
+        handleEditPhoto(e.dataTransfer.files[0]);
+      });
+      editPhotoInput.addEventListener('change', e => {
+        handleEditPhoto(e.target.files[0]);
+      });
+      function handleEditPhoto(file) {
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          editPhotoData = evt.target.result;
+          editPhotoPreview.src = editPhotoData;
+          editPhotoPreview.style.display = 'block';
+          document.getElementById('editPhotoText').style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      }
+      // Update profil siswa dengan foto baru
+      const editProfileForm = document.getElementById('editProfileForm');
+      editProfileForm.onsubmit = function(e) {
+        e.preventDefault();
+        const name = document.getElementById('editName').value.trim();
+        const desc = document.getElementById('editDesc').value.trim();
+        let p = getProfileSiswa();
+        p.name = name;
+        p.desc = desc;
+        if(editPhotoData) {
+          p.photo = editPhotoData;
+        }
+        setProfileSiswa(p);
+        renderSidebarProfile();
+        closeEditProfile();
+        editPhotoPreview.style.display = 'none';
+        document.getElementById('editPhotoText').style.display = '';
+        editPhotoData = '';
+      };
+      renderSidebarProfile();
+
+      // Sidebar menu logic
+      const menuMap = {
+        menuMateri: 'sectionMateri',
+        menuQuiz: 'sectionQuiz',
+        menuForum: 'sectionForum',
+        menuNews: 'sectionNews'
+      };
+      Object.keys(menuMap).forEach(menuId => {
+        document.getElementById(menuId).onclick = function(e) {
+          e.preventDefault();
+          // Set active
+          Object.keys(menuMap).forEach(mid => document.getElementById(mid).classList.remove('active'));
+          this.classList.add('active');
+          // Show/hide section
+          Object.values(menuMap).forEach(secId => document.getElementById(secId).style.display = 'none');
+          document.getElementById(menuMap[menuId]).style.display = '';
+          // Panggil render sesuai menu
+          if(menuId === 'menuMateri') renderMateriSiswa();
+          if(menuId === 'menuQuiz') renderQuiz();
+          if(menuId === 'menuForum') renderForum();
+          if(menuId === 'menuNews') renderNewsSiswa();
+        };
+      });
+    });
+  </script>
+
+  <!-- Modal Edit Profil Siswa -->
+  <div class="modal" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content p-4" style="max-width:400px;">
+        <h5 class="mb-3">Edit Profil Siswa</h5>
+        <form id="editProfileForm">
+          <div class="mb-3">
+            <label for="editName" class="form-label">Nama</label>
+            <input type="text" class="form-control" id="editName" required>
+          </div>
+          <div class="mb-3">
+            <label for="editDesc" class="form-label">Deskripsi</label>
+            <textarea class="form-control" id="editDesc" rows="2"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Foto Profil</label>
+            <div id="editPhotoDrop" class="drag-area mb-2" style="cursor:pointer;min-height:80px;">
+              <span id="editPhotoText">Tarik/lepas foto di sini atau klik untuk pilih file</span>
+              <img id="editPhotoPreview" src="" alt="Preview" style="display:none;max-width:100px;max-height:100px;" class="mt-2 rounded-circle">
+              <input type="file" id="editPhoto" accept="image/*" style="display:none;">
+            </div>
+          </div>
+          <div class="d-flex justify-content-end">
+            <button type="button" class="btn btn-secondary me-2" onclick="closeEditProfile()">Batal</button>
+            <button type="submit" class="btn btn-primary">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <!-- Start Footer -->
+    <footer class="cs_footer cs_blue_bg cs_bg_filed cs_white_color" data-src="assets/img/footer_bg.jpg">
+        <div class="cs_footer_bottom cs_primary_bg">
+          <div class="container">
+            <div class="cs_footer_bottom_in">
+              <p class="cs_footer_copyright mb-0">Copyright © 2025 KLMPK-8, All Rights Reserved.</p>
+            </div>
+          </div>
+        </div>
+      </footer>
+    <!-- End Footer -->
+</body>
+</html>
